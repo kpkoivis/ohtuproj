@@ -2,7 +2,9 @@
  * Created by kristiak on 14.5.2014.
  */
 
-var game = function () {
+var game = {};
+
+game.stmtest = (function() {
 
     var selite = document.getElementById("selite");
     var number = document.getElementById("numero");
@@ -20,30 +22,37 @@ var game = function () {
 
     var showNumIntervalFunc;
 
-    function getState() {
-        return states[state];
+    function getCurrentStateNumber() {
+        return [state];
     }
 
-    function setState(newState) {
+    function getCurrentStateName() {
+        return states[getCurrentStateNumber()];
+    }
+    
+    
+    
+    function setStateNumber(newState) {
+        
         state = newState;
     }
     
     function doEvent(eventInformation) {
-        var curState = getState();
+        var curState = getCurrentStateNumber();
 
         if (curState == "start") {
-            setState("displayNumbers");
+            setStateNumber("displayNumbers");
             doState();
         }
 
         else if (curState == "valiVaihe") {
-            setState("syotaNumerot");
+            setStateNumber("syotaNumerot");
             doState();
         }
 
         else if (curState == "syotaNumerot") {
             if (String.fromCharCode(eventInformation.which) == "H") {
-                setState("loppuinfo");
+                setStateNumber("loppuinfo");
                 doState();
             } else {
                 inputChars[inputIndex++] = String.fromCharCode(eventInformation.which);
@@ -58,10 +67,11 @@ var game = function () {
     }
 
     function doState() {
-        stateElement.innerHTML = state;
-        var curState = getState();
+        var curState = getCurrentStateNumber();
+        stateElement.innerHTML = curState;
 
-        if (getState == "start") {
+
+        if (curState == "start") {
             selite.innerHTML = "Kohta näytetään numeroita. Paina jotain nappulaa aloittaaksesi";
         }
 
@@ -91,11 +101,11 @@ var game = function () {
         }
 
         function showNumber() {
-            if (state == "displayNumbers") {
+            if (curState == "displayNumbers") {
                 if (index == displayNumbers.length) {
                     number.innerHTML = " ";
                     clearInterval(showNumIntervalFunc);
-                    setState("valiVaihe");
+                    setStateNumber("valiVaihe");
                     doState();
                 } else {
                     number.innerHTML = displayNumbers[index];
@@ -105,29 +115,40 @@ var game = function () {
         }
     }
 
+
+    function reset () {
+        state = 0;
+        inputChars = [ ];
+        inputIndex = 0;
+        document.getElementById("state").innerHTML = "RESET";
+    }
+
+
+
     return {
-        reset : function () {
-            state = states[ "start" ];
-            inputChars = [ ];
-            inputIndex = 0;
+        reset : reset,
+        doState : function () {
+            dostate();
         },
-        getState : function () {
+        getCurrentStateNumber : function () {
             name = newName;
         },
         putEvent : function (eventInformation) {
             doEvent(eventInformation);
         }
     };
-}();
+})();
 
 
 
 $(document).ready(function() {
-    var thisGame = new game();
-    thisGame.reset();
+    document.getElementById("state").innerHTML = "ABOUT TO RESET";
+    //var thisGame = new game();
+    game.stmtest.reset();
+    game.stmtest.doState();
 
     $(document).keydown(function(eventInformation) {
-        thisGame.putEvent(eventInformation);
+        game.stmtest.putEvent(eventInformation);
     });
 });
 
