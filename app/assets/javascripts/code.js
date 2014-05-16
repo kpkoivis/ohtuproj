@@ -17,8 +17,22 @@ game.stmtest = (function() {
 
     var inputChars = [ ];
     var inputIndex;
-    
-    var states = [ "start", "displayNumbers", "intersession", "userInput", "endInfo" ];
+
+    var doStateFunc = { "start":          doStateStart,
+                        "displayNumbers": doStateDisplayNumbers,
+                        "intersession":   doStateIntersession,
+                        "userInput":      doStateUserInput,
+                        "endInfo":        doStateEndInfo
+    };
+
+    var doEventFunc = { "start":          doEventStart,
+                        "displayNumbers": doEventDisplayNumbers,
+                        "intersession":   doEventIntersession,
+                        "userInput":      doEventUserInput,
+                        "endInfo":        doEventEndInfo
+    };
+
+    var states = [  "start", "displayNumbers", "intersession", "userInput", "endInfo" ];
     var state;
 
     var showNumIntervalFunc;
@@ -43,88 +57,98 @@ game.stmtest = (function() {
 
 
 
-    function doEvent(eventInformation) {
-        var curState = getCurrentStateName();
 
-        if (curState == "start") {
-            setStateByName("displayNumbers");
-            doState();
+    function doStateStart() {
+        inputChars = [ ];
+        inputIndex = 0;
+        instructions.innerHTML = "Kohta näytetään numeroita. Paina jotain nappulaa aloittaaksesi";
+    }
+
+    function doStateDisplayNumbers() {
+        instructions.innerHTML = "No nyt tulee!";
+
+        displayIndex = 0;
+        showNumIntervalFunc = setInterval(showNumber, 1000);
+    }
+
+    function doStateIntersession() {
+        instructions.innerHTML = "Tää on välivaihe! Paina nappulaa niin saat luetella numerot!";
+    }
+
+    function doStateUserInput() {
+        instructions.innerHTML = "Ny on numeroiden syöttö meneillään! Paine h-näppäintä kun olet valmis!";
+    }
+
+    function doStateEndInfo() {
+        var s = "";
+        s += "Nää merkit sää laitoit: ";
+        for (var i = 0; i < inputChars.length; i++) {
+            s += "- " + inputChars[i];
         }
+        s += " Paina jotain näppäintä jatkaaksesi!";
+        instructions.innerHTML = s;
+    }
 
-        else if (curState == "intersession") {
-            setStateByName("userInput");
-            doState();
-        }
-
-        else if (curState == "userInput") {
-            if (String.fromCharCode(eventInformation.which) == "H") {
-                setStateByName("endInfo");
+    function showNumber() {
+        if (getCurrentStateName() == "displayNumbers") {
+            if (displayIndex == displayNumbers.length) {
+                number.innerHTML = " ";
+                clearInterval(showNumIntervalFunc);
+                setStateByName("intersession");
                 doState();
             } else {
-                inputChars[inputIndex++] = String.fromCharCode(eventInformation.which);
+                number.innerHTML = displayNumbers[displayIndex];
+                displayIndex++;
             }
         }
+    }
 
-        else if (state == "endInfo") {
 
+
+
+
+    function doEventStart(eventInformation) {
+        setStateByName("displayNumbers");
+        doState();
+    }
+
+    function doEventDisplayNumbers(eventInformation) {
+
+    }
+
+    function doEventIntersession(eventInformation) {
+        setStateByName("userInput");
+        doState();
+    }
+
+    function doEventUserInput(eventInformation) {
+        if (String.fromCharCode(eventInformation.which) == "H") {
+            setStateByName("endInfo");
+            doState();
+        } else {
+            inputChars[inputIndex++] = String.fromCharCode(eventInformation.which);
         }
+    }
 
+    function doEventEndInfo(eventInformation) {
+        setStateByName("start");
+        doState();
+
+    }
+
+    function doEvent(eventInformation) {
+        doEventFunc[getCurrentStateName()](eventInformation);
         input.innerHTML = ": " + String.fromCharCode(eventInformation.which);
     }
 
+
     function doState() {
-        var curState = getCurrentStateName();
-        stateElement.innerHTML = curState;
-
-        if (curState == "start") {
-            instructions.innerHTML = "Kohta näytetään numeroita. Paina jotain nappulaa aloittaaksesi";
-        }
-
-        if (curState == "displayNumbers") {
-            instructions.innerHTML = "No nyt tulee!";
-
-            displayIndex = 0;
-            showNumIntervalFunc = setInterval(showNumber, 1000);
-        }
-
-        if (curState == "intersession") {
-            instructions.innerHTML = "Tää on välivaihe! Paina nappulaa niin saat luetella numerot!";
-
-        }
-
-        if (curState == "userInput") {
-            instructions.innerHTML = "Ny on numeroiden syöttö meneillään! Paine h-näppäintä kun olet valmis!";
-        }
-
-        if (curState == "endInfo") {
-            var s = "";
-            s += "Nää merkit sää laitoit: ";
-            for (var i = 0; i < inputChars.length; i++) {
-                s += "- " + inputChars[i];
-            }
-            instructions.innerHTML = s;
-        }
-
-        function showNumber() {
-            if (getCurrentStateName() == "displayNumbers") {
-                if (displayIndex == displayNumbers.length) {
-                    number.innerHTML = " ";
-                    clearInterval(showNumIntervalFunc);
-                    setStateByName("intersession");
-                    doState();
-                } else {
-                    number.innerHTML = displayNumbers[displayIndex];
-                    displayIndex++;
-                }
-            }
-        }
+        stateElement.innerHTML = getCurrentStateName();
+        doStateFunc[getCurrentStateName()]();
     }
 
     function reset () {
         setStateByName("start");
-
-        inputChars = [ ];
-        inputIndex = 0;
 
         instructions = document.getElementById("instructions");
         number = document.getElementById("dispNumber");
