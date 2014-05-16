@@ -15,5 +15,5 @@
 /log/*.log
 /tmp
 
-.idea/*
+.idea/
 
