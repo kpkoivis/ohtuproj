@@ -2,6 +2,7 @@
  * Created by kristiak on 14.5.2014.
  */
 
+
 function stateMachine () {
     function state (name, entryFunc, eventFunc) {
         var name = name;
@@ -29,69 +30,73 @@ function stateMachine () {
 
 
     var states = [ ];
-    var stateIndex = 0;
-
     var transitions = [ ];
-    var transitionIndex = 0;
-
-    var state;
+    var curState;
 
 
     function reset() {
-        state = 0;
+        curState = 0;
         states[0].entryFunc();
     }
 
     function getCurrentStateNumber() {
-        return state;
+        return curState;
     }
 
     function getCurrentStateName() {
-        var stat = getCurrentStateNumber();
-        return states[stat];
+        return states[getCurrentStateNumber()].name;
     }
 
-
-    function setStateByNumber(newState) {
-        state = newState;
+    function getStateByName(stateName) {
+        for (var i = 0; i < states.length; i++) {
+            if (states[i].name == stateName) {
+                return states[i];
+            }
+        }
+        return null;
     }
 
-    function setStateByName(newStateName) {
-        state = states.indexOf(newStateName);
+    function enterStateByName(newStateName) {
+        for (var i = 0; i < states.length; i++) {
+            if (states[i].name == newStateName) {
+                curState = i;
+                states[i].entryFunc();
+            }
+        }
     }
 
     function registerState(newStateName, entryfunction, eventFunction) {
-        var newState = new state (newStateName, entryfunction, eventFunction);
-        states[stateIndex++] = newState;
+        states.push(new state (newStateName, entryfunction, eventFunction));
     }
 
     function registerTransition(fromState, toState, keys) {
-        var newTransition = new transition(fromState, toState, keys);
-        transitions[transitionIndex++] = newTransition;
+        transitions.push(new transition(fromState, toState, keys));
     }
 
     function doEvent(eventInformation) {
-        states[state].eventFunc(eventInformation);
+        states[curState].eventFunc(eventInformation);
     }
 
-    function transition(stateName) {
-        state = 1;
-        states[1].entryFunc();
+    function transitionToState(stateName) {
+        for (var i = 0; i < transitions.length; i++) {
+            if (transitions[i].fromState == getCurrentStateName()) {
+                if (transitions[i].toState == stateName) {
+                    enterStateByName(stateName);
+                }
+            }
+        }
     }
 
     return {
         reset : reset,
         getCurrentStateNumber : getCurrentStateNumber,
         getCurrentStateName : getCurrentStateName,
-        setStateByNumber : setStateByNumber,
-        setStateByName : setStateByName,
         registerState : registerState,
         registerTransition : registerTransition,
         doEvent : doEvent,
-        transition : transition
+        transitionToState : transitionToState
     };
 }
-
 
 
 var game = {};
@@ -103,22 +108,26 @@ game.stmtest = {};
 
 game.stmtest.logic = (function() {
 
-    var instructions;
-    var number;
-    var input;
-    var stateElement;
-    instructions = $( "#instructions" );
-    number = document.getElementById("dispNumber");
-    input = document.getElementById("input");
-    stateElement = document.getElementById("state");
+
+    var texts = {welcome: "Welcome to Short Term Memory Test, press enter to continue",
+        start: "You are about to start a short term memory test, press space bar to start",
+        input: "Input the numbers in order which they came, after you are ready press space bar",
+        inputSeq: "Number sequence as you remembered them",
+        testSeq: "Number sequence as it was in the test",
+        points: "points for your results: "};
+
+
+    //var displayNumbers = [ "7", "6", "5", "4", "3"];
+    var displayNumbers = [ "7", "6" ];
+    var displayIndex;
 
     var stateM = new stateMachine();
 
-    stateM.registerState("start",           doStateStart, doEventStart);
-    stateM.registerState("displayNumbers",  doStateDisplayNumbers, doEventDisplayNumbers);
-    stateM.registerState("intersession",    doStateIntersession, doEventIntersession);
-    stateM.registerState("userInput",       doStateUserInput, doEventUserInput);
-    stateM.registerState("endInfo",         doStateEndInfo, doEventEndInfo);
+    stateM.registerState("start",           doWhenEnteringStartState,           processEventsInStartState);
+    stateM.registerState("displayNumbers",  doWhenEnteringDisplayNumbersState,  processEventsInDisplayNumbersState);
+    stateM.registerState("intersession",    doWhenEnteringIntersessionState,    processEventsInIntersessionState);
+    stateM.registerState("userInput",       doWhenEnteringUserInputState,       processEventsInUserInputState);
+    stateM.registerState("endInfo",         doWhenEnteringEndInfoState,         processEventsInEndInfoState);
 
     stateM.registerTransition("start", "displayNumbers", " ");
     stateM.registerTransition("displayNumbers", "intersession", "");
@@ -127,100 +136,83 @@ game.stmtest.logic = (function() {
     stateM.registerTransition("userInput", "endInfo", "H");
     stateM.registerTransition("endInfo", "start", " ");
 
-    function doStateStart() {
-        inputChars = [ ];
-        inputIndex = 0;
-        document.getElementById("instructions").innerHTML = "Kohta näytetään numeroita. Paina jotain nappulaa aloittaaksesi";
+    function doWhenEnteringStartState() {
+        userInputChars = [ ];
+        game.stmtest.ui.setInstructionText("Kohta näytetään numeroita. Paina jotain nappulaa aloittaaksesi");
+
     }
 
-    function doStateDisplayNumbers() {
-        instructions.innerHTML = "No nyt tulee!";
+    function doWhenEnteringDisplayNumbersState() {
+        game.stmtest.ui.setInstructionText("No nyt tulee!");
 
         displayIndex = 0;
         showNumIntervalFunc = setInterval(showNumber, 1000);
     }
 
-    function doStateIntersession() {
-        instructions.innerHTML = "Tää on välivaihe! Paina nappulaa niin saat luetella numerot!";
+    function doWhenEnteringIntersessionState() {
+        game.stmtest.ui.setInstructionText("Tää on välivaihe! Paina nappulaa niin saat luetella numerot!");
     }
 
-    function doStateUserInput() {
-        instructions.innerHTML = "Ny on numeroiden syöttö meneillään! Paine h-näppäintä kun olet valmis!";
+    function doWhenEnteringUserInputState() {
+        game.stmtest.ui.setInstructionText("Ny on numeroiden syöttö meneillään! Paine h-näppäintä kun olet valmis!");
     }
 
-    function doStateEndInfo() {
+    function doWhenEnteringEndInfoState() {
         var s = "";
         s += "Nää merkit sää laitoit: ";
-        for (var i = 0; i < inputChars.length; i++) {
-            s += "- " + inputChars[i];
+        for (var i = 0; i < userInputChars.length; i++) {
+            s += "- " + userInputChars[i];
         }
         s += " Paina jotain näppäintä jatkaaksesi!";
-        instructions.innerHTML = s;
+        game.stmtest.ui.setInstructionText(s);
     }
 
     function showNumber() {
         if (stateM.getCurrentStateName() == "displayNumbers") {
             if (displayIndex == displayNumbers.length) {
-                number.innerHTML = " ";
+                game.stmtest.ui.setDispNumber(" ");
                 clearInterval(showNumIntervalFunc);
-                setStateByName("intersession");
-                doState();
+                stateM.transitionToState("intersession");
             } else {
-                number.innerHTML = displayNumbers[displayIndex];
+                game.stmtest.ui.setDispNumber(displayNumbers[displayIndex]);
                 displayIndex++;
             }
         }
     }
 
-
-
-
-
-    function doEventStart(eventInformation) {
-        stateM.transition("displayNumbers");
+    function processEventsInStartState(eventInformation) {
+        stateM.transitionToState("displayNumbers");
     }
 
-    function doEventDisplayNumbers(eventInformation) {
+    function processEventsInDisplayNumbersState(eventInformation) {
 
     }
 
-    function doEventIntersession(eventInformation) {
-        setStateByName("userInput");
-        doState();
+    function processEventsInIntersessionState(eventInformation) {
+        stateM.transitionToState("userInput");
     }
 
-    function doEventUserInput(eventInformation) {
+    function processEventsInUserInputState(eventInformation) {
         if (String.fromCharCode(eventInformation.which) == "H") {
-            setStateByName("endInfo");
-            doState();
+            stateM.transitionToState("endInfo");
         } else {
-            inputChars[inputIndex++] = String.fromCharCode(eventInformation.which);
+            userInputChars.push(String.fromCharCode(eventInformation.which));
         }
     }
 
-    function doEventEndInfo(eventInformation) {
-        setStateByName("start");
-        doState();
+    function processEventsInEndInfoState(eventInformation) {
+        stateM.transitionToState("start");
 
     }
 
     function reset () {
         stateM.reset();
-
-
-        instructions = document.getElementById("instructions");
-        number = document.getElementById("dispNumber");
-        input = document.getElementById("input");
-        stateElement = document.getElementById("state");
     }
 
     function doEvent(eventInformation) {
         stateM.doEvent(eventInformation);
-        //doEventFunc[getCurrentStateName()](eventInformation);
-        input.innerHTML = ": " + String.fromCharCode(eventInformation.which);
+        $("#input").html(": " + String.fromCharCode(eventInformation.which));
     }
-
-
 
     return {
         reset : reset,
@@ -233,154 +225,25 @@ game.stmtest.logic = (function() {
 
 
 game.stmtest.ui = (function() {
-
-    var instructions;
-    var number;
-    var input;
-    var stateElement;
-
-    //var displayNumbers = [ "7", "6", "5", "4", "3"];
-    var displayNumbers = [ "7", "6" ];
-    var displayIndex;
-
-    var inputChars = [ ];
-    var inputIndex;
-
-    var doStateFunc = { "start":          doStateStart,
-                        "displayNumbers": doStateDisplayNumbers,
-                        "intersession":   doStateIntersession,
-                        "userInput":      doStateUserInput,
-                        "endInfo":        doStateEndInfo
-    };
-
-    var doEventFunc = { "start":          doEventStart,
-                        "displayNumbers": doEventDisplayNumbers,
-                        "intersession":   doEventIntersession,
-                        "userInput":      doEventUserInput,
-                        "endInfo":        doEventEndInfo
-    };
-
-    var states = [  "start", "displayNumbers", "intersession", "userInput", "endInfo" ];
-    var state;
-
-    var showNumIntervalFunc;
-
-
-
-
-
-
-    function doStateStart() {
-        inputChars = [ ];
-        inputIndex = 0;
-        instructions.innerHTML = "Kohta näytetään numeroita. Paina jotain nappulaa aloittaaksesi";
+    function setInstructionText(text) {
+        $( "#instructions").html(text);
     }
 
-    function doStateDisplayNumbers() {
-        instructions.innerHTML = "No nyt tulee!";
-
-        displayIndex = 0;
-        showNumIntervalFunc = setInterval(showNumber, 1000);
-    }
-
-    function doStateIntersession() {
-        instructions.innerHTML = "Tää on välivaihe! Paina nappulaa niin saat luetella numerot!";
-    }
-
-    function doStateUserInput() {
-        instructions.innerHTML = "Ny on numeroiden syöttö meneillään! Paine h-näppäintä kun olet valmis!";
-    }
-
-    function doStateEndInfo() {
-        var s = "";
-        s += "Nää merkit sää laitoit: ";
-        for (var i = 0; i < inputChars.length; i++) {
-            s += "- " + inputChars[i];
-        }
-        s += " Paina jotain näppäintä jatkaaksesi!";
-        instructions.innerHTML = s;
-    }
-
-    function showNumber() {
-        if (getCurrentStateName() == "displayNumbers") {
-            if (displayIndex == displayNumbers.length) {
-                number.innerHTML = " ";
-                clearInterval(showNumIntervalFunc);
-                setStateByName("intersession");
-                doState();
-            } else {
-                number.innerHTML = displayNumbers[displayIndex];
-                displayIndex++;
-            }
-        }
-    }
-
-
-
-
-
-    function doEventStart(eventInformation) {
-        setStateByName("displayNumbers");
-        doState();
-    }
-
-    function doEventDisplayNumbers(eventInformation) {
-
-    }
-
-    function doEventIntersession(eventInformation) {
-        setStateByName("userInput");
-        doState();
-    }
-
-    function doEventUserInput(eventInformation) {
-        if (String.fromCharCode(eventInformation.which) == "H") {
-            setStateByName("endInfo");
-            doState();
-        } else {
-            inputChars[inputIndex++] = String.fromCharCode(eventInformation.which);
-        }
-    }
-
-    function doEventEndInfo(eventInformation) {
-        setStateByName("start");
-        doState();
-
-    }
-
-    function doEvent(eventInformation) {
-        doEventFunc[getCurrentStateName()](eventInformation);
-        input.innerHTML = ": " + String.fromCharCode(eventInformation.which);
-    }
-
-
-    function doState() {
-        stateElement.innerHTML = getCurrentStateName();
-        doStateFunc[getCurrentStateName()]();
-    }
-
-    function reset () {
-        setStateByName("start");
-
-        instructions = document.getElementById("instructions");
-        number = document.getElementById("dispNumber");
-        input = document.getElementById("input");
-        stateElement = document.getElementById("state");
+    function setDispNumber(number) {
+        $( "#dispNumber").html(number);
     }
 
     return {
-        reset : reset,
-        doState : doState,
-        doEvent : doEvent
+        setInstructionText : setInstructionText,
+        setDispNumber : setDispNumber
     };
+
 })();
 
 
-
 $(document).ready(function() {
-    document.getElementById("state").innerHTML = "ABOUT TO RESET";
+    $("#instructions").html("ABOUT TO RESET");
     game.stmtest.logic.reset();
-    //game.stmtest.logic.start();
 
     $(document).keydown(function(eventInformation) {
         game.stmtest.logic.doEvent(eventInformation);
