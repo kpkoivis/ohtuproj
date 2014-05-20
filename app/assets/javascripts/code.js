@@ -10,7 +10,7 @@ function stateMachine () {
         var eventFunc = eventFunc;
 
         return {
-            name : name,
+            name :      name,
             entryFunc : entryFunc,
             eventFunc : eventFunc
         };
@@ -23,16 +23,14 @@ function stateMachine () {
 
         return {
             fromState : fromState,
-            toState : toState,
-            keys : keys
+            toState :   toState,
+            keys :      keys
         };
     }
-
 
     var states = [ ];
     var transitions = [ ];
     var curState;
-
 
     function reset() {
         curState = 0;
@@ -73,28 +71,26 @@ function stateMachine () {
         transitions.push(new transition(fromState, toState, keys));
     }
 
-    function doEvent(eventInformation) {
+    function processEvent(eventInformation) {
         states[curState].eventFunc(eventInformation);
     }
 
     function transitionToState(stateName) {
         for (var i = 0; i < transitions.length; i++) {
-            if (transitions[i].fromState == getCurrentStateName()) {
-                if (transitions[i].toState == stateName) {
-                    enterStateByName(stateName);
-                }
+            if (transitions[i].fromState == getCurrentStateName() && transitions[i].toState == stateName) {
+                enterStateByName(stateName);
             }
         }
     }
 
     return {
-        reset : reset,
+        reset :                 reset,
         getCurrentStateNumber : getCurrentStateNumber,
-        getCurrentStateName : getCurrentStateName,
-        registerState : registerState,
-        registerTransition : registerTransition,
-        doEvent : doEvent,
-        transitionToState : transitionToState
+        getCurrentStateName :   getCurrentStateName,
+        registerState :         registerState,
+        registerTransition :    registerTransition,
+        processEvent :          processEvent,
+        transitionToState :     transitionToState
     };
 }
 
@@ -108,14 +104,11 @@ game.stmtest = {};
 
 game.stmtest.logic = (function() {
 
-
-    var texts = {welcome: "Welcome to Short Term Memory Test, press enter to continue",
-        start: "You are about to start a short term memory test, press space bar to start",
-        input: "Input the numbers in order which they came, after you are ready press space bar",
-        inputSeq: "Number sequence as you remembered them",
-        testSeq: "Number sequence as it was in the test",
-        points: "points for your results: "};
-
+    var texts = {start:             "Kohta näytetään numeroita. Paina jotain nappulaa aloittaaksesi",
+                 displayNumbers:    "No nyt tulee!",
+                 intersession:      "Tää on välivaihe! Paina nappulaa niin saat luetella numerot!",
+                 userInput:         "Ny on numeroiden syöttö meneillään! Paine h-näppäintä kun olet valmis!",
+                 endInfo:           ""};
 
     //var displayNumbers = [ "7", "6", "5", "4", "3"];
     var displayNumbers = [ "7", "6" ];
@@ -138,23 +131,21 @@ game.stmtest.logic = (function() {
 
     function doWhenEnteringStartState() {
         userInputChars = [ ];
-        game.stmtest.ui.setInstructionText("Kohta näytetään numeroita. Paina jotain nappulaa aloittaaksesi");
-
+        game.stmtest.ui.setInstructionText(texts['start']);
     }
 
     function doWhenEnteringDisplayNumbersState() {
-        game.stmtest.ui.setInstructionText("No nyt tulee!");
-
+        game.stmtest.ui.setInstructionText(texts['displayNumbers']);
         displayIndex = 0;
         showNumIntervalFunc = setInterval(showNumber, 1000);
     }
 
     function doWhenEnteringIntersessionState() {
-        game.stmtest.ui.setInstructionText("Tää on välivaihe! Paina nappulaa niin saat luetella numerot!");
+        game.stmtest.ui.setInstructionText(texts['intersession']);
     }
 
     function doWhenEnteringUserInputState() {
-        game.stmtest.ui.setInstructionText("Ny on numeroiden syöttö meneillään! Paine h-näppäintä kun olet valmis!");
+        game.stmtest.ui.setInstructionText(texts['userInput']);
     }
 
     function doWhenEnteringEndInfoState() {
@@ -165,6 +156,7 @@ game.stmtest.logic = (function() {
         }
         s += " Paina jotain näppäintä jatkaaksesi!";
         game.stmtest.ui.setInstructionText(s);
+        game.stmtest.ui.setDispNumber("");
     }
 
     function showNumber() {
@@ -197,6 +189,7 @@ game.stmtest.logic = (function() {
             stateM.transitionToState("endInfo");
         } else {
             userInputChars.push(String.fromCharCode(eventInformation.which));
+            game.stmtest.ui.setDispNumber(String.fromCharCode(eventInformation.which));
         }
     }
 
@@ -207,16 +200,19 @@ game.stmtest.logic = (function() {
 
     function reset () {
         stateM.reset();
+        $(document).keydown(function(eventInformation) {
+            processEvent(eventInformation);
+        });
     }
 
-    function doEvent(eventInformation) {
-        stateM.doEvent(eventInformation);
-        $("#input").html(": " + String.fromCharCode(eventInformation.which));
+    function processEvent(eventInformation) {
+        stateM.processEvent(eventInformation);
+
     }
 
     return {
-        reset : reset,
-        doEvent : doEvent
+        reset :         reset,
+        processEvent :  processEvent
     };
 
 
@@ -234,20 +230,15 @@ game.stmtest.ui = (function() {
     }
 
     return {
-        setInstructionText : setInstructionText,
-        setDispNumber : setDispNumber
+        setInstructionText :    setInstructionText,
+        setDispNumber :         setDispNumber
     };
 
 })();
 
 
 $(document).ready(function() {
-    $("#instructions").html("ABOUT TO RESET");
     game.stmtest.logic.reset();
-
-    $(document).keydown(function(eventInformation) {
-        game.stmtest.logic.doEvent(eventInformation);
-    });
 });
 
 
